@@ -40,6 +40,8 @@ interface Store {
   judging: JudgeProgress | null;
   judgeMessage: { text: string; error: boolean } | null;
   runJudge: (targets: JudgeTarget[]) => Promise<void>;
+  /** Short message shown under the header, e.g. after saving or opening a job file. */
+  notice: { text: string; error: boolean } | null;
   flash: (text: string, error?: boolean) => void;
 }
 
@@ -75,6 +77,7 @@ export function StoreProvider({ initial, rev, children }: { initial: AppState; r
   const [config, setConfig] = useState<Config | null>(null);
   const [judging, setJudging] = useState<JudgeProgress | null>(null);
   const [judgeMessage, setJudgeMessage] = useState<Store["judgeMessage"]>(null);
+  const [notice, setNotice] = useState<Store["notice"]>(null);
 
   const stateRef = useRef(initial);
   const revRef = useRef(rev);
@@ -154,7 +157,12 @@ export function StoreProvider({ initial, rev, children }: { initial: AppState; r
     else root.setAttribute("data-theme", ui.theme);
   }, [ui.theme]);
 
-  const flash = useCallback((text: string, error = false) => setJudgeMessage({ text, error }), []);
+  const flash = useCallback((text: string, error = false) => setNotice({ text, error }), []);
+  useEffect(() => {
+    if (!notice || notice.error) return;
+    const t = setTimeout(() => setNotice(null), 8000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   /** Run the judge on each target in turn, filling its next empty run slot. Stops at the first error. */
   const runJudge = useCallback(
@@ -207,8 +215,8 @@ export function StoreProvider({ initial, rev, children }: { initial: AppState; r
   );
 
   const value = useMemo<Store>(
-    () => ({ state, update, ui, setUi, save, config, judging, judgeMessage, runJudge, flash }),
-    [state, update, ui, setUi, save, config, judging, judgeMessage, runJudge, flash],
+    () => ({ state, update, ui, setUi, save, config, judging, judgeMessage, runJudge, notice, flash }),
+    [state, update, ui, setUi, save, config, judging, judgeMessage, runJudge, notice, flash],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

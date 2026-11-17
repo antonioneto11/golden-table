@@ -53,7 +53,7 @@ function SaveIndicator() {
 }
 
 export function App() {
-  const { state, update, ui, setUi, save, flash, judgeMessage } = useStore();
+  const { state, update, ui, setUi, save, flash, notice } = useStore();
   const { ws, job } = useCurrent();
   const fileRef = useRef<HTMLInputElement>(null);
   const tab = Math.min(Math.max(ui.tab, 0), TABS.length - 1);
@@ -89,16 +89,19 @@ export function App() {
         target.jobs.push(j);
       });
       setUi({ wsId, jobId: j.id, tab: 0 });
-      flash(`Imported "${j.name}" as a new job.`);
+      flash(`Opened "${j.name}" and added it as a new job. Nothing else was changed.`);
     } catch (e) {
-      flash(`Could not import that file: ${e instanceof SyntaxError ? "it is not valid JSON" : formatZodError(e)}`, true);
+      console.warn("Job file rejected:", e instanceof SyntaxError ? e.message : formatZodError(e));
+      flash(`"${file.name}" isn't a Golden Table job file, or it is damaged. Choose a file that was made with "Save job as file".`, true);
     }
   };
 
   const onExport = () => {
     if (!job) return;
-    const slug = job.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "job";
-    download(`${slug}.json`, JSON.stringify(exportJob(job), null, 2));
+    const base = job.name.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim() || "Job";
+    const filename = `${base} (Golden Table job).json`;
+    download(filename, JSON.stringify(exportJob(job), null, 2));
+    flash(`Saved "${filename}" to your Downloads folder. Keep it as a backup or send it to someone; they can load it with "Open job file".`);
   };
 
   return (
@@ -118,11 +121,11 @@ export function App() {
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
-          <button className="btn" onClick={() => fileRef.current?.click()}>
-            Import job
+          <button className="btn" onClick={onExport} disabled={!job} title="Download this job (rubric, rows, grades and judge results) as one file you can keep or share">
+            Save job as file
           </button>
-          <button className="btn" onClick={onExport} disabled={!job}>
-            Export job
+          <button className="btn" onClick={() => fileRef.current?.click()} title="Add a job from a file saved with “Save job as file”. Your existing jobs are not changed.">
+            Open job file
           </button>
           <input
             ref={fileRef}
@@ -147,7 +150,11 @@ export function App() {
         </div>
       )}
       {save.kind === "error" && <p className="note err">Saving failed: {save.message}</p>}
-      {judgeMessage && tab < 5 && <p className={`note ${judgeMessage.error ? "err" : ""}`}>{judgeMessage.text}</p>}
+      {notice && (
+        <p className={`note ${notice.error ? "err" : ""}`} role={notice.error ? "alert" : "status"}>
+          {notice.text}
+        </p>
+      )}
 
       <nav className="bar" aria-label="Workstreams">
         <span className="lbl">Workstream</span>

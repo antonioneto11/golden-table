@@ -113,7 +113,7 @@ export function JudgeTab() {
                         {st ? (
                           <span className="pill plain">{st}</span>
                         ) : firstRun?.unreadable && !j ? (
-                          <span className="pill warn">Unreadable output</span>
+                          <span className="pill warn">Couldn't read result</span>
                         ) : (
                           <VerdictPill g={j?.grade ?? firstRun?.grade} none={x.human.verdict === "unfinished" ? "Grade it first" : "No run yet"} />
                         )}

@@ -144,7 +144,9 @@ try {
   const judgeOut =
     'Sure, here you go:\n```json\n{"checks":{"S1":{"why":"says save more","yes":true},"S2":{"why":"mentions review","yes":true},"N1":{"why":"none","yes":false}}}\n```\n' +
     '{"scores":{"accuracy":{"why":"fine","score":5}}}\n{"scores":{"clarity":{"why":"short","score":5}}}';
-  await page.getByLabel(/Judge run 1/).fill(judgeOut);
+  await page.getByText("Advanced: add a judge result by hand").click();
+  await page.getByLabel("Judge result to add").fill(judgeOut);
+  await page.getByRole("button", { name: "Add this result" }).click();
   await page.getByText("False pass").first().waitFor();
   await page.screenshot({ path: `${SHOTS}/04-judge-run.png`, fullPage: true });
 
@@ -171,13 +173,13 @@ try {
   log("state survived a server restart");
 
   // ---- Export and import round trip ----
-  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export job" }).click()]);
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Save job as file" }).click()]);
   const file = path.join(path.dirname(DATA), "export.json");
   await dl.saveAs(file);
   const exported = JSON.parse(readFileSync(file, "utf8"));
-  log("exported:", exported.kind, exported.job.name, `${exported.job.rows[0].answers.length} answers`);
+  log("saved file:", dl.suggestedFilename(), "|", exported.kind, exported.job.name, `${exported.job.rows[0].answers.length} answers`);
   await page.locator('input[type="file"]').setInputFiles(file);
-  await page.getByText('Imported "Summarize a meeting (imported)"').waitFor();
+  await page.getByText('Opened "Summarize a meeting (imported)"').waitFor();
   await tab(/Judge check/);
   const pillsImported = await page.locator("section.card .summary").first().innerText();
   if (pillsImported !== pills) throw new Error(`Imported metrics differ:\n${pillsImported}\nvs\n${pills}`);
@@ -187,7 +189,7 @@ try {
   const bad = path.join(path.dirname(DATA), "bad.json");
   (await import("node:fs")).writeFileSync(bad, '{"kind":"golden-table-job","version":1,"job":{"name":1}}');
   await page.locator('input[type="file"]').setInputFiles(bad);
-  await page.getByText("Could not import that file").waitFor();
+  await page.getByText("isn't a Golden Table job file").waitFor();
   log("malformed import rejected with a message");
 
   await saved();

@@ -38,14 +38,14 @@ Without a key and model the app still works fully. You can paste judge output by
 | `npm run dev` | API and Vite dev server with reload. |
 | `npm test` | Unit tests: scoring, judge prompts, parser, agreement, storage, export/import. |
 | `npm run typecheck` | `tsc --noEmit` across client, server and tests. |
-| `npm run e2e` | Builds the app, then drives it in headless Google Chrome at 400px width. It creates a job, adds a row, grades three answers, enters a judge run, checks the differences, restarts the server and round-trips export/import. It uses a temporary data file and needs Chrome installed. |
+| `npm run e2e` | Builds the app, then drives it in headless Google Chrome at 400px width. It creates a job, adds a row, grades three answers, enters a judge run, checks the differences, restarts the server and saves and reopens a job file. It uses a temporary data file and needs Chrome installed. |
 
 ## Data
 
 - All state lives in one JSON file, `data/state.json`. The app autosaves about 0.4s after your last edit, and the save indicator in the header shows the status.
 - Writes are atomic: a temp file is written, then renamed over the old one. Each save carries a revision number. If another tab saved first, the server refuses the stale write and the app asks you to reload, so it never silently overwrites.
 - If the file can't be read, it is moved aside to `state.json.unreadable-<time>` rather than overwritten.
-- **Export job** downloads one job as JSON. **Import job** always adds it as a new job in the current workstream, with fresh ids and an "(imported)" suffix on name clashes. Nothing is overwritten.
+- **Save job as file** downloads one job (rubric, rows, grades and judge runs) as `<job name> (Golden Table job).json`, for backup or sharing. **Open job file** adds such a file as a new job in the current workstream, with fresh ids and an "(imported)" suffix on name clashes. Nothing is overwritten, and a file that isn't a valid job is rejected with a plain message.
 - `data/*.json` is git-ignored. The example households and records are invented.
 
 ## Scoring rules
@@ -90,7 +90,7 @@ A dimension set to 0 by a broken rule needs no hand score. Weights that don't to
 - **Worked examples:** only from **Tuning** answers on **other** rows. **Holdout answers never appear in a prompt**, and this is covered by a test.
 - **Output format:** JSON, `{"checks":{"S1":{"why":"…","yes":true}}}` or `{"scores":{"clarity":{"why":"…","score":3}}}`. Parsing is tolerant: it handles code fences, surrounding prose, several objects, and `"yes"`/`"no"` strings. Scores other than 0, 3 or 5 are shown as warnings and ignored.
 - **Runs:** each answer has up to three run slots. **Run judge** fills the next empty slot for one answer. **Run all** judges every graded answer that has no run yet, and **Add a repeat run** adds one more to each. Progress is shown per answer. If a call fails, the run stops with the reason, and runs already finished are kept.
-- **Pasting by hand:** you can paste judge output into any slot, for example from another model.
+- **Adding a result by hand:** under "Advanced: add a judge result by hand", you can paste a reply produced elsewhere, for example by another model. Each run normally shows only its verdict and differences; the raw reply is behind "Show the judge's raw reply".
 - **Line mapping:** runs made in the app record which line each S1/N2 meant at that moment, so later line edits don't shift them. Pasted runs are read by position against the current lines.
 
 ## Agreement metrics (Judge check)

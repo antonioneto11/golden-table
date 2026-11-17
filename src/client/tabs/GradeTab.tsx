@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { answerAgreement } from "../../shared/agreement";
 import { dimLabel, GROUP_INFO } from "../../shared/dims";
 import { buildJudgeCalls } from "../../shared/judge";
@@ -88,8 +89,8 @@ function JudgeRuns({ job, row, a, editAnswer }: { job: Job; row: Row; a: Answer;
         >
           {mine ? `Running call ${judging!.call + 1} of ${judging!.calls}…` : "Run judge"}
         </button>
-        {!config?.judgeReady && <span className="muted small">Set ANTHROPIC_API_KEY and JUDGE_MODEL in .env to run it here. You can still paste output below.</span>}
-        {full && <span className="muted small">All three runs are filled. Clear one to run again.</span>}
+        {!config?.judgeReady && <span className="muted small">Set ANTHROPIC_API_KEY and JUDGE_MODEL in .env to run it here. </span>}
+        {full && <span className="muted small">All three runs are filled. Remove one to run again.</span>}
       </div>
       {judgeMessage && <p className={`note ${judgeMessage.error ? "err" : ""}`}>{judgeMessage.text}</p>}
       <details>
@@ -103,36 +104,27 @@ function JudgeRuns({ job, row, a, editAnswer }: { job: Job; row: Row; a: Answer;
           </div>
         ))}
       </details>
+      {ag.runs.every((r) => r.empty) && <p className="muted small">No judge runs yet for this answer.</p>}
       {[0, 1, 2].map((k) => {
         const r = ag.runs[k];
+        if (r.empty) return null;
         return (
           <div key={k} className="sub">
-            <TextField
-              area
-              rows={a.judgeRuns[k] ? 4 : 2}
-              label={`Judge run ${k + 1}: output from every call (paste here to enter by hand)`}
-              placeholder={'{"checks":{"S1":{"why":"...","yes":true}}}  {"scores":{"clarity":{"why":"...","score":5}}}'}
-              value={a.judgeRuns[k]}
-              onChange={(v) => editAnswer((x) => void (x.judgeRuns[k] = v))}
-            />
-            {!r.empty && (
-              <div className="row wrap">
-                {r.unreadable ? <span className="pill warn">Could not read any JSON checks or scores</span> : <VerdictPill g={r.grade} />}
-                {r.grade && ag.human.verdict !== "unfinished" && r.grade.verdict !== "unfinished" && (
-                  <span className={`pill ${r.grade.verdict === ag.human.verdict ? "ok" : "bad"}`}>
-                    {r.grade.verdict === ag.human.verdict ? "Same verdict as you" : r.grade.verdict === "pass" ? "False pass" : "False fail"}
-                  </span>
-                )}
-                {r.parsed?.warnings.map((w) => (
-                  <span key={w} className="pill warn">
-                    {w}
-                  </span>
-                ))}
-                <button className="btn sm ghost" onClick={() => editAnswer((x) => void (x.judgeRuns[k] = ""))}>
-                  Clear run
-                </button>
-              </div>
-            )}
+            <div className="row wrap">
+              <span className="flabel">Run {k + 1}</span>
+              {r.unreadable ? <span className="pill warn">Couldn't read this result</span> : <VerdictPill g={r.grade} />}
+              {r.grade && ag.human.verdict !== "unfinished" && r.grade.verdict !== "unfinished" && (
+                <span className={`pill ${r.grade.verdict === ag.human.verdict ? "ok" : "bad"}`}>
+                  {r.grade.verdict === ag.human.verdict ? "Same verdict as you" : r.grade.verdict === "pass" ? "False pass" : "False fail"}
+                </span>
+              )}
+              {r.parsed?.warnings.map((w) => (
+                <span key={w} className="pill warn">
+                  {w}
+                </span>
+              ))}
+              <ConfirmButton label="Remove run" onConfirm={() => editAnswer((x) => void (x.judgeRuns[k] = ""))} />
+            </div>
             {r.diffs.length > 0 && (
               <ul className="diff small">
                 {r.diffs.map((d) => (
@@ -144,10 +136,48 @@ function JudgeRuns({ job, row, a, editAnswer }: { job: Job; row: Row; a: Answer;
               </ul>
             )}
             {r.grade && r.diffs.length === 0 && <span className="muted small">No differences from your grades.</span>}
+            <details>
+              <summary>Show the judge's raw reply</summary>
+              <pre className="prompt">{a.judgeRuns[k]}</pre>
+            </details>
           </div>
         );
       })}
+      <PasteRun full={full} onAdd={(text) => editAnswer((x) => {
+        const slot = x.judgeRuns.findIndex((t) => !t.trim());
+        if (slot >= 0) x.judgeRuns[slot] = text;
+      })} />
     </Card>
+  );
+}
+
+/** Advanced: add a judge result produced outside the app (e.g. by another model). */
+function PasteRun({ full, onAdd }: { full: boolean; onAdd: (text: string) => void }) {
+  const [text, setText] = useState("");
+  return (
+    <details>
+      <summary>Advanced: add a judge result by hand</summary>
+      <div className="sub" style={{ marginTop: 8 }}>
+        <p className="muted small">
+          Only needed if you ran the judge prompts in another tool. Paste the judge's reply exactly as it came back; it must contain the JSON format shown in the
+          prompts.
+        </p>
+        <TextField area rows={4} label="Judge result to add" value={text} onChange={setText} />
+        <div className="row wrap">
+          <button
+            className="btn"
+            disabled={full || !text.trim()}
+            onClick={() => {
+              onAdd(text);
+              setText("");
+            }}
+          >
+            Add this result
+          </button>
+          {full && <span className="muted small">All three runs are filled. Remove one first.</span>}
+        </div>
+      </div>
+    </details>
   );
 }
 
