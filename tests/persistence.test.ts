@@ -51,7 +51,7 @@ describe("StateStore", () => {
 
 describe("export / import", () => {
   it("round-trips a job through JSON with fresh ids and identical content", () => {
-    const job = seedState().workstreams[0].jobs[1];
+    const job = seedState().workstreams[0].jobs[0];
     const json = JSON.stringify(exportJob(job));
     const back = importJob(JSON.parse(json), ["Something else"]);
     expect(back.id).not.toBe(job.id);

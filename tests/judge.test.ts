@@ -4,11 +4,12 @@ import { buildJudgeCalls, evaluateRun, JUDGE_GROUPS, parseJudgeOutput } from "..
 import { newAnswer } from "../src/shared/model";
 import { grade, groupLines, handDims } from "../src/shared/scoring";
 import { seedState } from "../src/shared/seed";
+import { catchMeUp } from "./fixtures";
 import type { Answer, Job, Row } from "../src/shared/types";
 
 function seedJobs() {
-  const [catchUp, reply] = seedState().workstreams[0].jobs;
-  return { catchUp, reply };
+  const [reply] = seedState().workstreams[0].jobs;
+  return { catchUp: catchMeUp(), reply };
 }
 
 /** Judge output that copies the person's grades exactly. */
@@ -25,10 +26,10 @@ function mirror(job: Job, row: Row, a: Answer, flip?: string): string {
 }
 
 describe("seed data", () => {
-  it("ships two example jobs; every seeded answer has a final human verdict", () => {
-    const { catchUp, reply } = seedJobs();
-    expect(catchUp.example && reply.example).toBe(true);
-    expect(catchUp.rows).toHaveLength(2);
+  it("ships one example job; every seeded answer has a final human verdict", () => {
+    const { reply } = seedJobs();
+    expect(seedState().workstreams[0].jobs).toHaveLength(1);
+    expect(reply.example).toBe(true);
     expect(reply.rows).toHaveLength(1);
     expect(reply.rows[0].answers).toHaveLength(10);
     const verdicts = Object.fromEntries(reply.rows[0].answers.map((a) => [a.name, grade(reply, reply.rows[0], a).verdict]));

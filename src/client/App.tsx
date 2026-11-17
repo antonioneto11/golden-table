@@ -181,7 +181,7 @@ export function App() {
       )}
       {ws && !job && (
         <div className="card">
-          <p>This workstream has no jobs yet. Add one, for example “Catch me up”.</p>
+          <p>This workstream has no jobs yet. Add one to start.</p>
           <div>
             <button className="btn primary" onClick={addJob}>
               Add a job

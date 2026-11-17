@@ -30,7 +30,7 @@ export function JobTab() {
           <TextField label="Workstream code (used in row labels)" value={ws.code} onChange={(v) => editWs((w) => void (w.code = v.trim().toUpperCase()))} />
         </div>
         <div className="grid2">
-          <TextField label="Job (use case)" value={job.name} placeholder="Catch me up" onChange={(v) => edit((j) => void (j.name = v))} />
+          <TextField label="Job (use case)" value={job.name} placeholder="Draft a text reply" onChange={(v) => edit((j) => void (j.name = v))} />
           <TextField label="Who reads the answer" value={job.reader} placeholder="The advisor" onChange={(v) => edit((j) => void (j.reader = v))} />
         </div>
         <div className="row wrap">
