@@ -42,9 +42,10 @@ export function newAnswer(name: string): Answer {
   };
 }
 
-export function nextRowLabel(ws: Workstream, job: Job): string {
+/** Next GOLD-<code>-NNN, numbered across every job in the workstream so labels stay unique. */
+export function nextRowLabel(ws: Workstream): string {
   let max = 0;
-  for (const r of job.rows) {
+  for (const r of ws.jobs.flatMap((j) => j.rows)) {
     const m = /(\d+)\s*$/.exec(r.label);
     if (m) max = Math.max(max, Number(m[1]));
   }
