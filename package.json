@@ -6,7 +6,8 @@
     "dev": "concurrently -k -n api,web -c blue,green \"tsx watch --env-file-if-exists=.env server/index.ts\" \"vite\"",
     "build": "vite build",
     "start": "NODE_ENV=production tsx --env-file-if-exists=.env server/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e": "npm run build && node e2e/smoke.mjs"
   },
   "repository": {
     "type": "git",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "concurrently": "^10.0.7",
+    "playwright-core": "^1.65.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
