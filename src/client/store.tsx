@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { buildJudgeCalls } from "../shared/judge";
+import { buildJudgeCalls, lineIdMap } from "../shared/judge";
 import type { Answer, AppState, Job, Row, Workstream } from "../shared/types";
 import { api, ApiError, type Config } from "./api";
 
@@ -174,7 +174,7 @@ export function StoreProvider({ initial, rev, children }: { initial: AppState; r
           }
           const calls = buildJudgeCalls(found.job, found.row, found.answer);
           if (!calls.length) throw new Error(`"${found.answer.name}" has no checks or hand-scored dimensions to judge.`);
-          const outs: string[] = [];
+          const outs: string[] = [lineIdMap(found.row)];
           for (let c = 0; c < calls.length; c++) {
             setJudging({ targets, index: i, call: c, calls: calls.length });
             const r = await api.judge(calls[c].prompt);

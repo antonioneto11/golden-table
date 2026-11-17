@@ -176,8 +176,17 @@ export interface ParsedJudge {
   /** Keyed by position id, e.g. { S: { 0: true } } for S1. */
   checks: Record<Group, Record<number, boolean>>;
   scores: Partial<Record<DimKey, Score>>;
+  /** Position id -> line id, stored by the app when it runs the judge, so later line edits do not shift results. */
+  lineIds?: Record<string, string>;
   warnings: string[];
   ok: boolean;
+}
+
+/** Recorded with each in-app run (never sent to the model): which line each position id meant at run time. */
+export function lineIdMap(row: Row): string {
+  const lineIds: Record<string, string> = {};
+  for (const g of JUDGE_GROUPS) groupLines(row, g).forEach((l, i) => (lineIds[`${g}${i + 1}`] = l.id));
+  return JSON.stringify({ lineIds });
 }
 
 export function parseJudgeOutput(text: string): ParsedJudge {
@@ -185,6 +194,10 @@ export function parseJudgeOutput(text: string): ParsedJudge {
   for (const obj of extractJsonObjects(text)) {
     if (!obj || typeof obj !== "object") continue;
     const o = obj as Record<string, unknown>;
+    if (o.lineIds && typeof o.lineIds === "object" && !o.checks && !o.scores) {
+      out.lineIds = { ...(out.lineIds ?? {}), ...(o.lineIds as Record<string, string>) };
+      continue;
+    }
     const checks = (o.checks ?? {}) as Record<string, unknown>;
     for (const [k, v] of Object.entries(checks)) {
       const m = /^\s*([SWNU])\s*-?\s*(\d+)\s*$/i.exec(k);
@@ -215,17 +228,23 @@ export function parseJudgeOutput(text: string): ParsedJudge {
 }
 
 /**
- * Turn a judge run into Marks for grade(). The judge's S/W/N/U are mapped from
- * position to line id on the current row; A ticks and automatic failures come
- * from the person, because they are code checks.
+ * Turn a judge run into Marks for grade(). The judge's S/W/N/U answers are
+ * mapped to line ids: via the run's stored lineIds when present, otherwise by
+ * position on the current row (pasted runs). Answers for lines that no longer
+ * exist are dropped. A ticks and automatic failures come from the person,
+ * because they are code checks.
  */
 export function judgeMarks(row: Row, human: Answer, parsed: ParsedJudge): Marks {
   const checks: Marks["checks"] = { S: {}, W: {}, N: {}, U: {}, A: { ...human.checks.A } };
-  for (const g of JUDGE_GROUPS)
-    groupLines(row, g).forEach((l, i) => {
-      const v = parsed.checks[g][i];
-      if (v !== undefined) checks[g][l.id] = v;
-    });
+  for (const g of JUDGE_GROUPS) {
+    const live = groupLines(row, g);
+    const liveIds = new Set(live.map((l) => l.id));
+    for (const [pos, v] of Object.entries(parsed.checks[g])) {
+      const key = `${g}${Number(pos) + 1}`;
+      const id = parsed.lineIds ? parsed.lineIds[key] : live[Number(pos)]?.id;
+      if (id && liveIds.has(id)) checks[g][id] = v;
+    }
+  }
   return { auto: { ...human.auto }, checks, scores: { ...parsed.scores } };
 }
 

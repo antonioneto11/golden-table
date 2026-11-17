@@ -191,3 +191,21 @@ describe("evaluateRun and agreement", () => {
     expect(ag.answers.find((x) => x.answer === half)!.runs[0].unreadable).toBe(true);
   });
 });
+
+describe("stored line ids on judge runs", () => {
+  it("keeps in-app runs attached to the right lines after a line is removed", async () => {
+    const { lineIdMap } = await import("../src/shared/judge");
+    const { reply } = seedJobs();
+    const row = reply.rows[0];
+    const a = row.answers[1]; // invented fact
+    const run = lineIdMap(row) + "\n" + mirror(reply, row, a);
+    expect(evaluateRun(reply, row, a, run).diffs).toEqual([]);
+    row.mustNot.shift(); // delete N1; old N2/N3 move up to positions 1/2
+    const r = evaluateRun(reply, row, a, run);
+    expect(r.diffs).toEqual([]);
+    // A pasted run (no map) is read by position, so the same text now misreads.
+    expect(evaluateRun(reply, row, a, mirror(reply, row, a)).diffs).toEqual([]);
+    const shifted = evaluateRun(reply, row, a, run.split("\n").slice(1).join("\n"));
+    expect(shifted.diffs.map((d) => d.id)).toEqual(["N1"]);
+  });
+});
